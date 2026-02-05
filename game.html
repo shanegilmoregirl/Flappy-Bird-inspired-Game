@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Pixel Bird</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: url("kaniii.jpg") no-repeat center center fixed;
+      background-size: cover;
+      font-family: 'Press Start 2P', cursive;
+      overflow: hidden;
+    }
+
+    canvas {
+      background: linear-gradient(to bottom, #a8e6cf, #dcedc1); /* green gradient */
+      border: 4px solid #333;
+      border-radius: 4px;
+      image-rendering: pixelated;
+    }
+
+    #scoreBoard {
+      position: absolute;
+      top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff66b2; /* cute pink */
+      text-shadow: 2px 2px 0 #3a3a3a;
+      font-family: 'Press Start 2P', cursive;
+    }
+
+    #gameOver {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      font-weight: bold;
+      color: #ff1744;
+      display: none;
+      background: #ffe6f0;
+      padding: 20px 40px;
+      border-radius: 8px;
+      border: 3px solid #ff66b2;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+      font-family: 'Press Start 2P', cursive;
+      text-align: center;
+    }
+
+    #gameOver button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #81c784;
+      border: 3px solid #388e3c;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: 'Press Start 2P', cursive;
+      color: white;
+      cursor: pointer;
+    }
+
+    #gameOver button:hover {
+      background: #66bb6a;
+    }
+
+    /* Members text */
+    #members {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+      font-family: 'Press Start 2P', cursive;
+      color: #ff66b2; /* cute green */
+      text-shadow: 2px 2px 0 #3a3a3a;
+    }
+  </style>
+  <!-- Pixel font -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<body>
+  <canvas id="gameCanvas" width="400" height="500"></canvas>
+  <div id="scoreBoard">Score: 0</div>
+  <div id="gameOver">GAME OVER<br><button onclick="restartGame()">RESTART</button></div>
+
+  <!-- Members at the bottom -->
+  <div id="members">Members: Cahayag, Larawan, Maga, Javier</div>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreBoard = document.getElementById("scoreBoard");
+    const gameOverDiv = document.getElementById("gameOver");
+
+    // Bird
+    let bird = {
+      x: 50,
+      y: 150,
+      size: 20,
+      gravity: 0.6,
+      lift: -7,
+      velocity: -7,
+      color: "#ff66b2" // cute pink bird
+    };
+
+    // Pipes
+    let pipes = [];
+    let pipeWidth = 40;
+    let pipeGap = 110;
+    let frame = 0;
+    let score = 0;
+    let gameRunning = true;
+
+    function drawPixelBird() {
+      ctx.fillStyle = bird.color;
+      ctx.fillRect(bird.x, bird.y, bird.size, bird.size);
+      ctx.strokeStyle = "#3a3a3a";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(bird.x, bird.y, bird.size, bird.size);
+    }
+
+    function drawPipes() {
+      ctx.fillStyle = "#4caf50"; // green pipes
+      for (let i = 0; i < pipes.length; i++) {
+        let p = pipes[i];
+        ctx.fillRect(p.x, 0, pipeWidth, p.top);
+        ctx.fillRect(p.x, canvas.height - p.bottom, pipeWidth, p.bottom);
+
+        // pipe outline
+        ctx.strokeStyle = "#2e7d32";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, 0, pipeWidth, p.top);
+        ctx.strokeRect(p.x, canvas.height - p.bottom, pipeWidth, p.bottom);
+      }
+    }
+
+    function updatePipes() {
+      if (frame % 100 === 0) {
+        let top = Math.floor(Math.random() * (canvas.height / 2));
+        let bottom = canvas.height - top - pipeGap;
+        pipes.push({ x: canvas.width, top: top, bottom: bottom });
+      }
+
+      for (let i = 0; i < pipes.length; i++) {
+        let p = pipes[i];
+        p.x -= 2;
+
+        // Collision detection
+        if (
+          bird.x + bird.size > p.x &&
+          bird.x < p.x + pipeWidth &&
+          (bird.y < p.top || bird.y + bird.size > canvas.height - p.bottom)
+        ) {
+          endGame();
+        }
+          
+
+        // Score update
+        if (p.x + pipeWidth === bird.x) {
+          score++;
+          scoreBoard.textContent = "Score: " + score;
+        }
+      }
+
+      // Remove old pipes
+      if (pipes.length && pipes[0].x < -pipeWidth) {
+        pipes.shift();
+      }
+    }
+
+    function updateBird() {
+      bird.velocity += bird.gravity;
+      bird.y += bird.velocity;
+
+      if (bird.y + bird.size >= canvas.height || bird.y <= 0) {
+        endGame();
+      }
+    }
+
+    function gameLoop() {
+      if (!gameRunning) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPixelBird();
+      drawPipes();
+      updatePipes();
+      updateBird();
+
+      frame++;
+      requestAnimationFrame(gameLoop);
+    }
+
+    function flap() {
+      bird.velocity = bird.lift;
+    }
+
+    function endGame() {
+      gameRunning = false;
+      gameOverDiv.style.display = "block";
+    }
+
+    function restartGame() {
+      bird.y = 150;
+      bird.velocity = 0;
+      pipes = [];
+      frame = 0;
+      score = 0;
+      scoreBoard.textContent = "Score: 0";
+      gameRunning = true;
+      gameOverDiv.style.display = "none";
+      gameLoop();
+    }
+
+
+     document.addEventListener("keydown", function(event)
+    {
+      if (event.code == "ArrowUp") {
+        flap();
+      }
+    });
+   
+
+    /* Controls
+    document.addEventListener("keydown", flap);
+    document.addEventListener("click", flap); */
+
+    // Start the game
+    gameLoop();
+  </script>
+</body>
+</html>
